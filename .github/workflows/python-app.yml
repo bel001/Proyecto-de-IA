@@ -1,0 +1,53 @@
+# Este workflow instalará dependencias de Python, ejecutará tests y linting con Python 3.11
+# Para más información: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python application
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Paso 1: Descargar el código del repositorio
+    - uses: actions/checkout@v4
+    
+    # Paso 2: Configurar Python 3.11
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    
+    # Paso 3: Actualizar pip e instalar dependencias
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8
+        # Instalar dependencias del proyecto
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    
+    # Paso 4: Verificar código con flake8 (busca errores de sintaxis y estilo)
+    - name: Lint with flake8
+      run: |
+        # Detener el build si hay errores de sintaxis o nombres indefinidos
+        flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Advertencias de complejidad y longitud de línea (no detiene el build)
+        flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    
+    # Paso 5: Verificar que los módulos principales se importan correctamente
+    # Nota: No ejecutamos app.py porque requiere webcam y entorno gráfico
+    - name: Test module imports
+      run: |
+        python -c "import sys; print(f'Python version: {sys.version}')"
+        python -c "import cv2; print(f'OpenCV version: {cv2.__version__}')"
+        python -c "import mediapipe as mp; print(f'MediaPipe version: {mp.__version__}')"
+        python -c "import numpy; print(f'NumPy version: {numpy.__version__}')"
+        echo "✅ Todas las dependencias principales se importaron correctamente"
